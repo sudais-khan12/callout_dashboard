@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Service Dispatch Dashboard</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        flex-wrap: wrap;
+        gap: 15px;
+      }
+      h1 {
+        color: white;
+        font-size: 2rem;
+        font-weight: 700;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .header-actions {
+        display: flex;
+        gap: 10px;
+      }
+      .btn {
+        background: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #667eea;
+      }
+      .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+      }
+      .btn:active {
+        transform: translateY(0);
+      }
+      .btn.loading {
+        pointer-events: none;
+        opacity: 0.7;
+      }
+      .refresh-icon {
+        transition: transform 0.5s ease;
+      }
+      .btn.loading .refresh-icon {
+        animation: spin 1s linear infinite;
+      }
+      .stats-bar {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 25px;
+        flex-wrap: wrap;
+      }
+      .stat-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        flex: 1;
+        min-width: 200px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+      }
+      .stat-icon {
+        font-size: 2.5rem;
+      }
+      .stat-info h3 {
+        font-size: 0.85rem;
+        color: #718096;
+        margin-bottom: 5px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .stat-info p {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #2d3748;
+      }
+      .dashboard {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 16px;
+        padding: 30px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        min-height: 400px;
+      }
+      .loading-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 400px;
+        gap: 20px;
+      }
+      .loader {
+        width: 60px;
+        height: 60px;
+        border: 4px solid rgba(102, 126, 234, 0.2);
+        border-top: 4px solid #667eea;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      .loading-text {
+        color: #667eea;
+        font-weight: 600;
+        font-size: 1.1rem;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      .dispatch-card {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+        border-left: 5px solid #667eea;
+        position: relative;
+      }
+      .dispatch-card:hover {
+        transform: translateX(5px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+      }
+      .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 15px;
+      }
+      .card-id {
+        font-size: 0.85rem;
+        color: #718096;
+        font-weight: 600;
+      }
+      .status-badge {
+        padding: 6px 16px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .status-dispatched {
+        background: #48bb78;
+        color: white;
+      }
+      .status-pending {
+        background: #ed8936;
+        color: white;
+      }
+      .status-completed {
+        background: #4299e1;
+        color: white;
+      }
+      .card-body {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+      }
+      .info-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .info-label {
+        font-size: 0.8rem;
+        color: #718096;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .info-value {
+        font-size: 1rem;
+        color: #2d3748;
+        font-weight: 500;
+      }
+      .info-value.issue {
+        font-style: italic;
+        color: #e53e3e;
+        line-height: 1.5;
+      }
+      .timestamp {
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid rgba(0, 0, 0, 0.1);
+        font-size: 0.85rem;
+        color: #718096;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .error-message {
+        text-align: center;
+        padding: 40px;
+        color: #e53e3e;
+        font-weight: 600;
+        font-size: 1.1rem;
+      }
+      .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #718096;
+      }
+      .empty-state-icon {
+        font-size: 4rem;
+        margin-bottom: 20px;
+      }
+      footer {
+        text-align: center;
+        margin-top: 40px;
+        color: white;
+        font-size: 0.9rem;
+        opacity: 0.9;
+      }
+      @media (max-width: 768px) {
+        h1 {
+          font-size: 1.5rem;
+        }
+        .dashboard {
+          padding: 20px;
+        }
+        .card-body {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>
+          <span>🚨</span>
+          <span>Service Dispatch Dashboard</span>
+        </h1>
+        <div class="header-actions">
+          <button class="btn" id="refreshBtn" onclick="refreshData()">
+            <svg
+              class="refresh-icon"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+              />
+            </svg>
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      <div class="stats-bar" id="statsBar" style="display: none">
+        <div class="stat-card">
+          <div class="stat-icon">📋</div>
+          <div class="stat-info">
+            <h3>Total Dispatches</h3>
+            <p id="totalCount">0</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">✅</div>
+          <div class="stat-info">
+            <h3>Dispatched</h3>
+            <p id="dispatchedCount">0</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🏢</div>
+          <div class="stat-info">
+            <h3>Contractors</h3>
+            <p id="contractorCount">0</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="dashboard" id="dashboard">
+        <div class="loading-state">
+          <div class="loader"></div>
+          <div class="loading-text">Loading dispatch data...</div>
+        </div>
+      </div>
+
+      <footer>Built with modern web technologies</footer>
+    </div>
+
+    <script>
+      const API_URL =
+        "https://testshdgc.app.n8n.cloud/webhook/6e282d6b-25f1-4439-9112-91c5f85b217c";
+      const dashboard = document.getElementById("dashboard");
+      const refreshBtn = document.getElementById("refreshBtn");
+      const statsBar = document.getElementById("statsBar");
+
+      async function fetchData() {
+        try {
+          const response = await fetch(API_URL);
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const data = await response.json();
+          showData(data);
+          console.log(data);
+        } catch (error) {
+          console.error("Fetch error:", error);
+          dashboard.innerHTML = `
+          <div class="error-message">
+            ⚠️ Failed to load dispatch data<br>
+            <small style="font-weight: normal; font-size: 0.9rem; margin-top: 10px; display: block;">
+              ${error.message}
+            </small>
+          </div>
+        `;
+          statsBar.style.display = "none";
+        }
+      }
+
+      function showData(data) {
+        // Extract json objects from the nested structure
+        let dispatches = [];
+
+        if (Array.isArray(data)) {
+          dispatches = data
+            .map((item) => item.json || item)
+            .filter((item) => item);
+        } else if (data.json) {
+          dispatches = [data.json];
+        } else {
+          dispatches = [data];
+        }
+
+        if (!dispatches || dispatches.length === 0) {
+          dashboard.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">📭</div>
+            <h3>No Dispatches Available</h3>
+            <p>There are no service dispatches to display at the moment.</p>
+          </div>
+        `;
+          statsBar.style.display = "none";
+          return;
+        }
+
+        // Update stats
+        updateStats(dispatches);
+        statsBar.style.display = "flex";
+
+        // Render dispatch cards
+        dashboard.innerHTML = dispatches
+          .map((dispatch) => createDispatchCard(dispatch))
+          .join("");
+      }
+
+      function updateStats(dispatches) {
+        const total = dispatches.length;
+        const dispatchedCount = dispatches.filter(
+          (d) => d.Status === "Dispatched"
+        ).length;
+        const contractors = new Set(dispatches.map((d) => d.Contractor)).size;
+
+        document.getElementById("totalCount").textContent = total;
+        document.getElementById("dispatchedCount").textContent =
+          dispatchedCount;
+        document.getElementById("contractorCount").textContent = contractors;
+      }
+
+      function createDispatchCard(dispatch) {
+        const statusClass = `status-${
+          dispatch.Status?.toLowerCase() || "pending"
+        }`;
+
+        return `
+        <div class="dispatch-card">
+          <div class="card-header">
+            <div class="card-id">Row #${dispatch.row_number || "N/A"}</div>
+            <span class="status-badge ${statusClass}">${
+          dispatch.Status || "Unknown"
+        }</span>
+          </div>
+          
+          <div class="card-body">
+            <div class="info-group">
+              <span class="info-label">🏢 Contractor</span>
+              <span class="info-value">${dispatch.Contractor || "N/A"}</span>
+            </div>
+            
+            <div class="info-group">
+              <span class="info-label">📍 Property</span>
+              <span class="info-value">${dispatch.Property || "N/A"}</span>
+            </div>
+            
+            <div class="info-group" style="grid-column: 1 / -1;">
+              <span class="info-label">⚠️ Issue Description</span>
+              <span class="info-value issue">${dispatch.Issue || "N/A"}</span>
+            </div>
+          </div>
+          
+          <div class="timestamp">
+            <span>🕐</span>
+            <span>${dispatch.Timestamp || "N/A"}</span>
+          </div>
+        </div>
+      `;
+      }
+
+      async function refreshData() {
+        refreshBtn.classList.add("loading");
+        dashboard.innerHTML = `
+        <div class="loading-state">
+          <div class="loader"></div>
+          <div class="loading-text">Refreshing dispatch data...</div>
+        </div>
+      `;
+
+        await fetchData();
+
+        setTimeout(() => {
+          refreshBtn.classList.remove("loading");
+        }, 500);
+      }
+
+      // Initial load
+      fetchData();
+    </script>
+  </body>
+</html>
